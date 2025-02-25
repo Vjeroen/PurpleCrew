@@ -1,0 +1,20 @@
+[project]
+name = "purplecrew"
+version = "0.1.0"
+description = "PurpleCrew using crewAI"
+authors = [{ name = "Your Name", email = "you@example.com" }]
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    "crewai[tools]>=0.100.1,<1.0.0",
+]
+
+[project.scripts]
+kickoff = "purplecrew.main:kickoff"
+plot = "purplecrew.main:plot"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.crewai]
+type = "flow"
