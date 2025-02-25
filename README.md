@@ -27,10 +27,10 @@ crewai install
 
 **Add your `OPENAI_API_KEY` into the `.env` file**
 
-- Modify `src/purplecrew/config/agents.yaml` to define your agents
-- Modify `src/purplecrew/config/tasks.yaml` to define your tasks
-- Modify `src/purplecrew/crew.py` to add your own logic, tools and specific args
-- Modify `src/purplecrew/main.py` to add custom inputs for your agents and tasks
+- Modify `src/<crewname>/config/agents.yaml` to define your agents
+- Modify `src/<crewname>/config/tasks.yaml` to define your tasks
+- Modify `src/<crewname>/crew.py` to add your own logic, tools and specific args
+- Modify `src/purplecrew/main.py` to add custom inputs for your agents and tasks, also to start the main flow for all the crews
 
 ## Running the Project
 
