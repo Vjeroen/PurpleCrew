@@ -1,8 +1,7 @@
 ti_analysis:
   description: >
     Conduct a thorough research about the adversaries, report based on the information you find specifically for the campaign being given, 
-    Make sure you find any interesting and relevant information given
-    the current year is 2025.
+    Make sure you find any interesting and relevant information given that you can find from teh submitted report in our RAG and or reference to online resources based on the APT group. 
   expected_output: >
     A curated list with all the attack techniques being used by the adversaries 
   agent: ThreathIntelAgent
@@ -16,12 +15,12 @@ techniques_validation:
     The final list should be structured as follows: Sequential order - TechniqueID - Technique description
   agent: MITTRE_ATTACK_Expert
 
-  pdf_rag_task:
+pdf_rag_task:
   description: >
-    Answer the question based on the PDF.
-    The rag agent will search through the PDF and return the most relevant information.
-    Your final answer MUST be clear and accurate, abse don the content of the PDF.
+    Answer the question based on the PDF, provide a comprhensive answer.
+    The ThreathIntelAgent will search through the PDF and return the most relevant information.
+    Your final answer MUST be clear and accurate related to the content of the PDF
     Here is the question: {input}
   expected_output: >
     Provide clear and accurate answer based on the PDF content.
-  agent: ThreathIntelAgent
+  agent: TIReportAnalyst

@@ -1,10 +1,15 @@
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 #from crewai_tools import PDFSearchTool
-from crewai_tools import PDFSearchTool, WebsiteSearchTool, ScrapeWebsiteTool, TXTSearchTool, DirectoryReadTool
+from crewai_tools import PDFSearchTool, WebsiteSearchTool, ScrapeWebsiteTool, TXTSearchTool, DirectoryReadTool,SerperDevTool
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field, model_validator
 from pathlib import Path
+from crewai import LLM
+import os
+#from purplecrew.tools.az_sentinel import get_sentinel_incidents
+
+
 load_dotenv()
 
 # If you want to run a snippet of code before or after the crew starts, 
@@ -23,42 +28,73 @@ class RedTeamCrew():
 		#create a RAG based on all the PDFs that we submitted 
 	
 	SCRIPT_DIR = Path(__file__).parent
-	pdf_path = str(SCRIPT_DIR / "documents/APT28-Center-of-Storm-2017.pdf")
+	pdf_path = str(SCRIPT_DIR/"documents/NCSC-MAR-Infamous-Chisel.pdf")
+	# Internet scraping via Serper, GOOGLE API scrape
+	SERPER_API_KEY = os.environ["SERPER_API_KEY"] 
+	serper_tool = SerperDevTool()
 	#PDFSearchTool create a RAG based database to analyze thge PDF files
 	pdf_search_tool = PDFSearchTool(pdf=pdf_path)
 	# In case of Tools add them here 
 	# TO agent needs to be able to start research based on sentence or on a PDF report. 
+	manager_llmv1= LLM(model="gpt-4o")
 	
+       
+	@agent 
+	def RedTeamManager(self) -> Agent:	
+		return Agent(
+			config=self.agents_config['RedTeamManager'],
+			verbose=True,
+			allow_delegation=True
+		)
 	@agent
+	#Agent that focusses on Report Analysis in the RAG 
+	def TIReportAnalyst(self) -> Agent:	
+		return Agent(
+			config=self.agents_config['TIReportAnalyst'],
+			tools=[self.pdf_search_tool],
+			verbose=True,
+			allow_delegation=False
+		)
+	@agent
+	#Agent that focuses on TI from Online sources via Serper
 	def ThreathIntelAgent(self) -> Agent:	
 		return Agent(
 			config=self.agents_config['ThreathIntelAgent'],
-			tools=[self.pdf_search_tool],
-			verbose=True
+			tools=[self.serper_tool],
+			verbose=True,
+			allow_delegation=False
 		)
-
-	# Agent that has the full knowledgebase of MITTRE ATT&CK (Ref. & cannot be used in agent definition)
+	# Agent that has the full knowledgebase of MITTRE ATT&CK Matrix 
 	@agent
 	def MITTRE_ATTACK_Expert(self) -> Agent:
 		return Agent(
-			config=self.agents_config['MITTRE_ATTACK_Expert'],
-			verbose=True
+			config=self.agents_config['MITTREATTACKExpert'],
+			tools=[self.serper_tool],
+			verbose=True,
+			allow_delegation=False
+		)
+	@agent
+	#Agent that is responsible for the Red Team Operations and starting Emulations
+	def RedTeamOperator(self) -> Agent:
+		return Agent(
+			config=self.agents_config['RedTeamOperator'],
+			tools=[self.serper_tool],
+			verbose=True,
+			allow_delegation=False
 		)
 	# To learn more about structured task outputs, 
 	# task dependencies, and task callbacks, check out the documentation:
 	# https://docs.crewai.com/concepts/tasks#overview-of-a-task
 	@task
+	def pdf_rag_task(self) -> Task:
+		return Task(
+			config=self.tasks_config['pdf_rag_task'],
+		)
+	@task
 	def ti_analysis(self) -> Task:
 		return Task(
 			config=self.tasks_config['ti_analysis']
 		)
-	
-	def pdf_rag_task(self) -> Task:
-		return Task(
-			config=self.tasks_config['pdf_rag_task'],
-			
-		)
-	
 	@task
 	def validate_techniques(self) -> Task:
 		return Task(
@@ -70,12 +106,14 @@ class RedTeamCrew():
 		"""Creates the Redteam crew"""
 		#Run all offensive research and activities that were defined by the redteam Manager
 		#print("Purple cloud Agents:", self.agents) #Display all the loaded agents ss
+	
 		return Crew(
+			
 			agents=self.agents, # Automatically created by the @agent decorator
 			tasks=self.tasks, # Automatically created by the @task decorator
 			process=Process.sequential,
+			manager_agent=self.RedTeamManager(),
 			verbose=True
-			# process=Process.hierarchical, # In case you wanna use that instead https://docs.crewai.com/how-to/Hierarchical/
 		)
 
 

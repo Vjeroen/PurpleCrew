@@ -1,15 +1,20 @@
 #!/usr/bin/env python
 from random import randint
 from crewai.flow import Flow, listen, start
-import sys
+import sys, os
 import warnings
 from pydantic import BaseModel
+import agentops
+
 
 #Import all the individual crew for our floew
 from crews.redteamcrew.redteamcrew import RedTeamCrew
 from crews.blueteamcrew.blueteamcrew import Blueteamcrew
 from crews.itopscrew.itopscrew import Itopscrew
 
+warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
+AGENTOPS_API_KEY = os.environ["AGENTOPS_API_KEY"] 
+agentops.init(api_key=AGENTOPS_API_KEY,default_tags=['crewai'])
 
 class PurpleCrew(BaseModel):
     sentence_count: int = 1
@@ -17,7 +22,7 @@ class PurpleCrew(BaseModel):
     redteamcrew: str = ""
     filepath: str = ""
     inputs:str =""
-    warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
+   
 
 class PurpleCrew(Flow[PurpleCrew]):
 
@@ -28,7 +33,7 @@ class PurpleCrew(Flow[PurpleCrew]):
         self.state.sentence_count = randint(1, 5)
         self.state.adversary = ""
         self.state.file_path = '' 
-        self.state.inputs = "APT28-Center-of-Storm-2017.pdf"
+        self.state.inputs = ""
 
     @listen(define_adversary)
     def start_analysis(self):
@@ -52,13 +57,13 @@ class PurpleCrew(Flow[PurpleCrew]):
 def kickoff():
     purplecrew = PurpleCrew()
     user_input = input("Enter your question: ")
-    inputs = {
+    vinputs = {
         'input': user_input
     }
     redteamresult = (
             RedTeamCrew()
             .crew()
-            .kickoff(inputs=inputs)
+            .kickoff(inputs=vinputs)
     )
     print(redteamresult)
     #.state.redteamcrew = redteamresult.raw
