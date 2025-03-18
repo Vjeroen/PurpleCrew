@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Purple Crew
 
 This project is based on the continious Purple teaming sessions. This code repository the crew AI agents that are running as part of the continious purple teaming talks. This project consosts of a crew AI flow that invokes 3 different crews: 
@@ -5,6 +6,11 @@ This project is based on the continious Purple teaming sessions. This code repos
  -  Blue Team Crew: Detect & Respond to security incidents and manage the detection ruleset. This includes detection engineering, consulting online repositories such as SIGMA to validate new detection uses cases.
  -  IT OPS Crew: The crew that will manage the infrastructure in an automated manner, researching API calls, spinning up emulation hosts and in case required update endpoint configurations to prevent certain attacks.
 
+=======
+# {{crew_name}} Crew
+
+Welcome to the {{crew_name}} Crew project, powered by [crewAI](https://crewai.com). This template is designed to help you set up a multi-agent AI system with ease, leveraging the powerful and flexible framework provided by crewAI. Our goal is to enable your agents to collaborate effectively on complex tasks, maximizing their collective intelligence and capabilities.
+>>>>>>> a598ff1 (Update Version)
 
 ## Installation
 
@@ -27,6 +33,7 @@ crewai install
 
 **Add your `OPENAI_API_KEY` into the `.env` file**
 
+<<<<<<< HEAD
 - Modify `src/<crewname>/config/agents.yaml` to define your agents
 - Modify `src/<crewname>/config/tasks.yaml` to define your tasks
 - Modify `src/<crewname>/crew.py` to add your own logic, tools and specific args
@@ -41,6 +48,24 @@ python main.py
 ```
 
 This command initializes the PurpleCrew Crew flow, assembling the agents and assigning them tasks as defined in your configuration.
+=======
+- Modify `src/purplecrew/config/agents.yaml` to define your agents
+- Modify `src/purplecrew/config/tasks.yaml` to define your tasks
+- Modify `src/purplecrew/crew.py` to add your own logic, tools and specific args
+- Modify `src/purplecrew/main.py` to add custom inputs for your agents and tasks
+
+## Running the Project
+
+To kickstart your crew of AI agents and begin task execution, run this from the root folder of your project:
+
+```bash
+crewai run
+```
+
+This command initializes the PurpleCrew Crew, assembling the agents and assigning them tasks as defined in your configuration.
+
+This example, unmodified, will run the create a `report.md` file with the output of a research on LLMs in the root folder.
+>>>>>>> a598ff1 (Update Version)
 
 ## Understanding Your Crew
 

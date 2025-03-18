@@ -1,0 +1,36 @@
+ti_analysis:
+  description: >
+    Conduct a thorough research about the adversaries, report based on the information you find specifically for the campaign being given, 
+    Make sure you find any interesting and relevant information given that you can find from teh submitted report in our RAG and or reference to online resources based on the APT group. 
+  expected_output: >
+    A curated list with all the attack techniques being used by the adversaries 
+  agent: ThreathIntelAgent
+
+techniques_validation:
+  description: >
+    Review the context you got and expand each topic into a full section for a report.
+    Make sure the report is detailed and contains any and all relevant information.
+    Validate if the techniques can be easily emulated, in case it costumized techniques are being used, provide a detailed explanation.
+  expected_output: >
+    A fully validated list that contains all the techniques that are being used based on the research that has been don by our Threat Intelligence agent: ThreatIntelAgent 
+    The final list should be structured as follows: Sequential order - TechniqueID - Technique description
+  agent: MITTRE_ATTACK_Expert
+
+pdf_rag_task:
+  description: >
+    Answer the question based on the PDF, your are able to identify the attacks being used and based on the report understand how the attacks are working.
+    The ThreathIntelAgent will search through the PDF and return the most relevant information.
+    Your final answer MUST be clear and accurate related to the content of the PDF.
+    Here is the question: {input}
+  expected_output: >
+    Provide clear and accurate answer based on the PDF content about techniques being used.
+  agent: TIReportAnalyst
+
+provide_techniques:
+  description: >
+    Provide a list of all the techniques that are being used by the adversaries.
+    Only take into account the techniques that can be emulated.
+    The list should be structured as follows: TechniqueID ordered in the sequence of execution - Technique description
+  expected_output: >
+    An array of techniquesIDs
+  agent: RedTeamManager
