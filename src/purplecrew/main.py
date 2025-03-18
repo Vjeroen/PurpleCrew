@@ -89,5 +89,9 @@ def plot():
     pruplecrew = PurpleCrew()
     pruplecrew.plot()
 
+def run(): 
+    # Initialize and start the flow
+    kickoff()
+
 if __name__ == "__main__":
     kickoff()

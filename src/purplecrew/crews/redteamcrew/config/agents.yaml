@@ -1,16 +1,16 @@
 RedTeamManager:
-  role: >
+  role: 
     RedTeamManager
-  goal: >
+  goal: 
     Your role is to coordinate the efforts of the crew members, ensuring that each task is completed on time and to the highest standard.
-  backstory: >
+  backstory: 
     You are an experienced red team manager for the offensive security team.
     skilled in guiding the teams to success, based on certain input you can coordinate the tasks within the team. 
-  description: >
+  description: 
     As the Red Team Manager, you are responsible for overseeing the crew and ensuring that all tasks are completed efficiently and to the highest standard. 
     You will assign tasks to the crew members, provide guidance and support as needed, and ensure that all deadlines are met. 
     Your role is crucial in ensuring that the crew operates smoothly and effectively, and that all objectives are achieved.
-  expected_outcome: >
+  expected_outcome:
     All tasks are completed on time, the output needs to be in structured format that was requested within the tasks or by the other crews.
 
 TIReportAnalyst:
@@ -25,7 +25,7 @@ TIReportAnalyst:
   input_variables: >
     pdf_path: "Path to the PDF file to analyze"
     question: "Besides finding the thechniques used, additional questions can be asked to the input"
-  max_iter: 3
+  max_iter: 8
 
 ThreathIntelAgent:
   role: >

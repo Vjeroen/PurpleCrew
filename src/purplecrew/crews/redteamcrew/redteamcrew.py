@@ -1,6 +1,7 @@
+#Red Team Crew version 1.0 - Jeroen Vandeleur - SANS SEC598 
+#----------------------------------------------------------------
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
-#from crewai_tools import PDFSearchTool
 from crewai_tools import PDFSearchTool, WebsiteSearchTool, ScrapeWebsiteTool, TXTSearchTool, DirectoryReadTool,SerperDevTool
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field, model_validator
@@ -8,10 +9,7 @@ from pathlib import Path
 from crewai import LLM
 import os
 #from purplecrew.tools.az_sentinel import get_sentinel_incidents
-
-
 load_dotenv()
-
 # If you want to run a snippet of code before or after the crew starts, 
 # you can use the @before_kickoff and @after_kickoff decorators
 # https://docs.crewai.com/concepts/crews#example-crew-class-with-decorators
@@ -43,6 +41,7 @@ class RedTeamCrew():
 			verbose=True,
 			allow_delegation=True
 		)
+
 	@agent
 	#Agent that focusses on Report Analysis in the RAG 
 	def TIReportAnalyst(self) -> Agent:	
@@ -79,43 +78,55 @@ class RedTeamCrew():
 			verbose=True,
 			allow_delegation=False
 		)
-	# To learn more about structured task outputs, 
-	# task dependencies, and task callbacks, check out the documentation:
-	# https://docs.crewai.com/concepts/tasks#overview-of-a-task
+	# The sequential tasks that are being coordinatoed by the Red Team Operator
+	# The tasks details and LLM cntext is located in the config/tasks.yaml file
+	# The process includes analyze input, enrich and validate data, create structured output, run emulation
 	@task
 	def pdf_rag_task(self) -> Task:
+		#Class input is PDF add it to the local RAG 
 		return Task(
 			config=self.tasks_config['pdf_rag_task'],
 		)
 	@task
 	def ti_analysis(self) -> Task:
+		# Class input is PDF add enrichment from online resources 
+		# Class input is quetions: this other task is with more details required
 		return Task(
 			config=self.tasks_config['ti_analysis']
 		)
 	@task
 	def validate_techniques(self) -> Task:
+		#validate with MITTRE ATT&CK Database and return validated output: TechniqueIDs and Technique names
 		return Task(
 			config=self.tasks_config['techniques_validation'],
 			output_file='report.md'
+			
 		)
 	@task 
 	def provide_techniques(self) -> Task:
+		#Create an md file of the techniques found by TI_Analyst or from PDF Report
 		return Task(
 			config=self.tasks_config['provide_techniques'],
 			output_file='techniquesfound.md'
 		)
-	
+	# Define Manager agent out scope of regular agents:
+
 	@crew
 	def crew(self) -> Crew:
 		"""Creates the Redteam crew"""
 		#Run all offensive research and activities that were defined by the redteam Manager
 		#print("Purple cloud Agents:", self.agents) #Display all the loaded agents 
+		#Excluding the manager agent from thw working team
+		redteam = [agent for agent in self.agents if agent.role != "RedTeamManager"]
+		print(redteam)
 		return Crew(
-			agents=self.agents, # Automatically created by the @agent decorator
+			agents= redteam, # Automatically created by the @agent decorator exclude manager
 			tasks=self.tasks, # Automatically created by the @task decorator
-			process=Process.sequential,
-			manager_agent=self.RedTeamManager(),
-			verbose=True
+			process=Process.hierarchical, #manager is responsible for coordination
+			manager_agent=self.RedTeamManager(), #Manager of the crew
+			verbose=True,
+			planning=True
 		)
+
 
 
