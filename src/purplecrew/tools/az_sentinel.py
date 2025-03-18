@@ -1,62 +1,71 @@
-import requests
 import os
-from crewai.tools import BaseTool
-from textwrap import dedent
-from pydantic import BaseModel, Field
-from typing import Type
+import requests
+from crewai_tools import BaseTool
+from typing import Optional
 
-# Load credentials from environment svariables
-# Please delete these before public release 
-AZURE_TENANT_ID = "3ca8b581-41a2-4668-b4b9-f2cac90fb069"
-AZURE_CLIENT_ID = "837162f3-e91e-4f1d-b7b7-e457674fa553"
-AZURE_CLIENT_SECRET = "BmK8Q~LG_U6VCVRovEZPOGC-cx62alRYANAtsbUx"
-LOG_ANALYTICS_WORKSPACE_ID = "LOG_ANALYTICS_WORKSPACE_ID"
-#LOG_ANALYTICS_WORKSPACE_ID = os.getenv("LOG_ANALYTICS_WORKSPACE_ID")
+class SentinelAPIHelper:
+    def __init__(self):
+        self.client_id = os.getenv("AZURE_CLIENT_ID")
+        self.client_secret = os.getenv("AZURE_CLIENT_SECRET")
+        self.tenant_id = os.getenv("AZURE_TENANT_ID")
+        self.workspace_id = os.getenv("SENTINEL_WORKSPACE_ID")
+        self.subscription_id = os.getenv("AZURE_SUBSCRIPTION_ID")
+        self.resource_group = os.getenv("AZURE_RESOURCE_GROUP")
+        self.workspace_name = os.getenv("SENTINEL_WORKSPACE_NAME")
+        self.token = self.get_token()
+        self.headers = {
+            'Authorization': f'Bearer {self.token}',
+            'Content-Type': 'application/json'
+        }
 
-# Azure OAuth token URL
-TOKEN_URL = f"https://login.microsoftonline.com/{AZURE_TENANT_ID}/oauth2/v2.0/token"
+    def get_token(self):
+        url = f"https://login.microsoftonline.com/{self.tenant_id}/oauth2/v2.0/token"
+        data = {
+            'grant_type': 'client_credentials',
+            'client_id': self.client_id,
+            'client_secret': self.client_secret,
+            'scope': 'https://api.loganalytics.io/.default https://management.azure.com/.default'
+        }
+        resp = requests.post(url, data=data)
+        resp.raise_for_status()
+        return resp.json()["access_token"]
 
-def get_access_token():
-    """Authenticate and return an access token for Azure Sentinel"""
-    data = {
-        "grant_type": "client_credentials",
-        "client_id": AZURE_CLIENT_ID,
-        "client_secret": AZURE_CLIENT_SECRET,
-        "scope": "https://management.azure.com/.default"
-    }
-    response = requests.post(TOKEN_URL, data=data)
-    return response.json().get("access_token")
+    def get_recent_events(self, hours_back=1):
+        url = f"https://api.loganalytics.io/v1/workspaces/{self.workspace_id}/query"
+        query = f"SecurityIncident | where TimeGenerated > ago({hours_back}h) | project TimeGenerated, IncidentNumber, Title, Description, Techniques"
+        body = {"query": query}
+        resp = requests.post(url, headers=self.headers, json=body)
+        resp.raise_for_status()
+        return resp.json()["tables"][0]["rows"]
 
-#@tool
-def get_sentinel_incidents():
-    """Fetch security incidents from Azure Sentinel"""
-    access_token = get_access_token()
-    if not access_token:
-        return "Authentication failed."
+    def get_analytics_rules(self):
+        url = (
+            f"https://management.azure.com/subscriptions/{self.subscription_id}/resourceGroups/"
+            f"{self.resource_group}/providers/Microsoft.OperationalInsights/workspaces/{self.workspace_name}/providers/"
+            f"Microsoft.SecurityInsights/alertRules?api-version=2022-11-01-preview"
+        )
+        resp = requests.get(url, headers=self.headers)
+        resp.raise_for_status()
+        rules = resp.json().get('value', [])
+        return [{"name": r['name'], "displayName": r['properties']['displayName']} for r in rules]
 
-    url = f"https://management.azure.com/subscriptions/YOUR_SUBSCRIPTION_ID/resourceGroups/YOUR_RESOURCE_GROUP/providers/Microsoft.OperationalInsights/workspaces/{LOG_ANALYTICS_WORKSPACE_ID}/providers/Microsoft.SecurityInsights/incidents?api-version=2022-07-01-preview"
-    
-    headers = {"Authorization": f"Bearer {access_token}"}
-    response = requests.get(url, headers=headers)
+class SentinelTool(BaseTool):
+    name: str = "sentinel_data_tool"
+    description: str = "Fetches recent events and analytic rules from Azure Sentinel."
 
-    if response.status_code == 200:
-        incidents = response.json().get("value", [])
-        return incidents if incidents else "No incidents found."
-    return f"Failed to fetch incidents: {response.text}"
+    def _run(self, hours_back: Optional[int] = 1) -> str:
+        helper = SentinelAPIHelper()
 
-class azsentinelInput(BaseModel):
-    """Input schema for MyCustomTool."""
+        events = helper.get_recent_events(hours_back=hours_back)
+        event_report = [f"Time: {e[0]}, Incident #: {e[1]}, Title: {e[2]}, Techniques: {e[4]}" for e in events]
 
-    argument: str = Field(..., description="Description of the argument.")
+        rules = helper.get_analytics_rules()
+        rule_report = [f"{r['displayName']} (ID: {r['name']})" for r in rules]
 
-class azsentinel(BaseTool):
-    """Input schema for MyCustomTool."""
-    name: str = "AZSentinel"
-    description: str = (
-        "Clear description for what this tool is useful for, your agent will need this information to use it."
-    )
-    args_schema: Type[BaseModel] = azsentinelInput
-
-    def _run(self, argument: str) -> str:
-        # Implementation goes here
-        return "this is an example of a tool output, ignore it and move along."
+        report = "\n".join([
+            "Recent Security Events:",
+            *event_report,
+            "\nCurrent Analytic Rules:",
+            *rule_report
+        ])
+        return report
