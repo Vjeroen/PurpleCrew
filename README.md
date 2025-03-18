@@ -3,7 +3,7 @@
 
 ## Overview
 
-PurpleCrew is a project that leverages AI agents to perform various tasks. It uses the `crewai` framework to manage and run these agents. The project is designed to be customizable, allowing users to define their own agents, tasks, and logic.
+PurpleCrew is a project that leverages AI agents to perform various tasks. It uses the CREWAI framework to manage and run these agents. The project is designed to be customizable, allowing users to define their own agents, tasks, and logic.
 
 1. **Red Team Crew**: This crew simulates adversarial attacks to test the security posture of the system. It helps in identifying vulnerabilities and weaknesses by performing penetration testing and other offensive security tasks.
 
