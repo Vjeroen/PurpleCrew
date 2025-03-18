@@ -1,15 +1,15 @@
-Sure, here is the content for the 
-
-README.md
-
- file with all the sections included:
-
 ```markdown
 # PurpleCrew Project
 
 ## Overview
 
 PurpleCrew is a project that leverages AI agents to perform various tasks. It uses the `crewai` framework to manage and run these agents. The project is designed to be customizable, allowing users to define their own agents, tasks, and logic.
+
+1. **Red Team Crew**: This crew simulates adversarial attacks to test the security posture of the system. It helps in identifying vulnerabilities and weaknesses by performing penetration testing and other offensive security tasks.
+
+2. **Blue Team Crew**: This crew is responsible for defending the system against attacks. It monitors the system for suspicious activities, responds to incidents, and implements security measures to protect the system.
+
+3. **IT Ops Crew**: This crew handles the operational aspects of the IT infrastructure. It ensures that the systems are running smoothly, performs maintenance tasks, and manages the overall IT environment.
 
 ## Installation
 
