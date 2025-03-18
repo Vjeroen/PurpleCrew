@@ -1,83 +1,102 @@
-<<<<<<< HEAD
-# Purple Crew
+Sure, here is the content for the 
 
-This project is based on the continious Purple teaming sessions. This code repository the crew AI agents that are running as part of the continious purple teaming talks. This project consosts of a crew AI flow that invokes 3 different crews: 
- -  Red Team Crew: Invoke red team activities such as review TI reports, validate with Online resources and create an emulation plan based on MITTRE ATT&CK Patterns
- -  Blue Team Crew: Detect & Respond to security incidents and manage the detection ruleset. This includes detection engineering, consulting online repositories such as SIGMA to validate new detection uses cases.
- -  IT OPS Crew: The crew that will manage the infrastructure in an automated manner, researching API calls, spinning up emulation hosts and in case required update endpoint configurations to prevent certain attacks.
+README.md
 
-=======
-# {{crew_name}} Crew
+ file with all the sections included:
 
-Welcome to the {{crew_name}} Crew project, powered by [crewAI](https://crewai.com). This template is designed to help you set up a multi-agent AI system with ease, leveraging the powerful and flexible framework provided by crewAI. Our goal is to enable your agents to collaborate effectively on complex tasks, maximizing their collective intelligence and capabilities.
->>>>>>> a598ff1 (Update Version)
+```markdown
+# PurpleCrew Project
+
+## Overview
+
+PurpleCrew is a project that leverages AI agents to perform various tasks. It uses the `crewai` framework to manage and run these agents. The project is designed to be customizable, allowing users to define their own agents, tasks, and logic.
 
 ## Installation
 
-Ensure you have Python >=3.10 <3.13 installed on your system. This project uses [UV](https://docs.astral.sh/uv/) for dependency management and package handling, offering a seamless setup and execution experience.
+### Requirements
 
-First, if you haven't already, install uv:
+- Python >=3.10 <3.13
+- `crewai` framework
+- `uv` for dependency management
 
-```bash
-pip install uv
-```
+### Steps to Install
 
-Next, navigate to your project directory and install the dependencies:
+1. **Clone the Repository**
 
-(Optional) Lock the dependencies and install them by using the CLI command:
-```bash
-crewai install
-```
+   ```bash
+   git clone https://github.com/yourusername/purplecrew.git
+   cd purplecrew
+   ```
 
-### Customizing
+2. **Install UV**
 
-**Add your `OPENAI_API_KEY` into the `.env` file**
+   If you haven't already, install UV:
 
-<<<<<<< HEAD
-- Modify `src/<crewname>/config/agents.yaml` to define your agents
-- Modify `src/<crewname>/config/tasks.yaml` to define your tasks
-- Modify `src/<crewname>/crew.py` to add your own logic, tools and specific args
-- Modify `src/purplecrew/main.py` to add custom inputs for your agents and tasks, also to start the main flow for all the crews
+   ```bash
+   pip install uv
+   ```
+
+3. **Install Dependencies**
+
+   Use the `crewai` CLI to install dependencies:
+
+   ```bash
+   crewai install
+   ```
+
+4. **Set Up Environment Variables**
+
+   Add your `OPENAI_API_KEY` to the 
+
+.env
+
+ file in the root directory.
+
+   ```plaintext
+   OPENAI_API_KEY=your_openai_api_key
+   ```
+
+## Customization
+
+1. **Define Your Agents**
+
+   Modify `src/purplecrew/config/agents.yaml` to define your agents.
+
+2. **Define Your Tasks**
+
+   Modify `src/purplecrew/config/tasks.yaml` to define your tasks.
+
+3. **Add Custom Logic**
+
+   Modify `src/purplecrew/crew.py` to add your own logic, tools, and specific arguments.
+
+4. **Customize Inputs**
+
+   Modify 
+
+main.py
+
+ to add custom inputs for your agents and tasks.
 
 ## Running the Project
 
-To kickstart your crew of AI agents and begin task execution, run this from the src folder of your project:
-
-```bash
-python main.py 
-```
-
-This command initializes the PurpleCrew Crew flow, assembling the agents and assigning them tasks as defined in your configuration.
-=======
-- Modify `src/purplecrew/config/agents.yaml` to define your agents
-- Modify `src/purplecrew/config/tasks.yaml` to define your tasks
-- Modify `src/purplecrew/crew.py` to add your own logic, tools and specific args
-- Modify `src/purplecrew/main.py` to add custom inputs for your agents and tasks
-
-## Running the Project
-
-To kickstart your crew of AI agents and begin task execution, run this from the root folder of your project:
+To start the PurpleCrew project and run the agents, use the following command from the root directory:
 
 ```bash
 crewai run
 ```
 
-This command initializes the PurpleCrew Crew, assembling the agents and assigning them tasks as defined in your configuration.
-
-This example, unmodified, will run the create a `report.md` file with the output of a research on LLMs in the root folder.
->>>>>>> a598ff1 (Update Version)
-
-## Understanding Your Crew
-
-The PurpleCrew Crew is composed of multiple AI agents, each with unique roles, goals, and tools. These agents collaborate on a series of tasks, defined in `config/tasks.yaml`, leveraging their collective skills to achieve complex objectives. The `config/agents.yaml` file outlines the capabilities and configurations of each agent in your crew.
-
 ## Support
 
-For support, questions, or feedback regarding the {{crew_name}} Crew or crewAI.
+For support, questions, or feedback regarding the PurpleCrew project:
 
-- Visit our [documentation](https://docs.crewai.com)
-- Reach out to us through our [GitHub repository](https://github.com/joaomdmoura/crewai)
-- [Join our Discord](https://discord.com/invite/X4JWnZnxPb)
-- [Chat with our docs](https://chatg.pt/DWjSBZn)
+- Visit the [documentation](https://docs.crewai.com)
+- Reach out through the [GitHub repository](https://github.com/joaomdmoura/crewai)
+- [Join the Discord](https://discord.com/invite/X4JWnZnxPb)
+- [Chat with the docs](https://chatg.pt/DWjSBZn)
 
 Let's create wonders together with the power and simplicity of crewAI.
+```
+
+Save this content in a file named `README.md` in the root directory of your project.
+Save this content in a file named `README.md` in the root directory of your project.
