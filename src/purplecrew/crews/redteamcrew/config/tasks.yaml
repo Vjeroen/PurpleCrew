@@ -34,3 +34,16 @@ provide_techniques:
   expected_output: >
     An array of techniquesIDs
   agent: RedTeamManager
+
+run_red_team_emulation:
+  description: >
+    Use Caldera to run a red team emulation based on the following technique IDs:
+    {technique_ids}
+
+    Target agent group for the operation: {agent_group}
+
+    You must fetch all abilities for each technique, create an adversary, start an operation,
+    and monitor status until completion.
+  expected_output: >
+    Final operation report with status per executed ability and final completion message.
+  agent: RedTeamOperator

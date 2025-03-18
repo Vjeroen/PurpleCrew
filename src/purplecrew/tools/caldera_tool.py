@@ -3,11 +3,14 @@ import requests
 import time
 import random
 import datetime
-from crewai_tools import tool
+from typing import Type
+from crewai.tools import BaseTool
+from typing import Optional
 
+# Helper class for API operations
 class CalderaAPIHelper:
     def __init__(self):
-        self.base_url = os.getenv('CALDERA_IP')  # Example: http://192.168.1.10:8888
+        self.base_url = os.getenv('CALDERA_IP')
         self.api_key = os.getenv('CALDERA_API_KEY')
         self.headers = {
             'Authorization': f'Bearer {self.api_key}',
@@ -70,47 +73,48 @@ class CalderaAPIHelper:
         return response.json()
 
 
-@tool("caldera_emulation_tool")
-def caldera_emulation_tool(technique_ids: str, agent_group: str) -> str:
-    """
-    Fetch abilities by technique ID, create adversary, start operation, and monitor execution status.
-    Inputs:
-    - technique_ids: comma-separated list of technique IDs (e.g., T1003,T1059)
-    - agent_group: Name of the agent group to run the operation on
-    """
-    helper = CalderaAPIHelper()
+# Tool Class that CrewAI will recognize
+class CalderaEmulationTool(BaseTool):
+    name : str  = "caldera_emulation_tool"
+    description : str  = (
+        "Fetch abilities by technique ID, create adversary, start operation, "
+        "and monitor execution status using MITRE Caldera."
+    )
 
-    # Step 1: Fetch abilities
-    tid_list = [tid.strip() for tid in technique_ids.split(',')]
-    abilities, errors = helper.get_abilities_by_techniques(tid_list)
-    if not abilities:
-        return f"Error: No valid abilities found. Issues: {errors}"
+    def _run(self, technique_ids: str, agent_group: str) -> str:
+        helper = CalderaAPIHelper()
 
-    ability_ids = [a['id'] for a in abilities]
+        # Step 1: Fetch abilities
+        tid_list = [tid.strip() for tid in technique_ids.split(',')]
+        abilities, errors = helper.get_abilities_by_techniques(tid_list)
+        if not abilities:
+            return f"Error: No valid abilities found. Issues: {errors}"
 
-    # Step 2: Create adversary
-    adversary_id = helper.create_adversary(ability_ids)
+        ability_ids = [a['id'] for a in abilities]
 
-    # Step 3: Start operation
-    operation_id, op_name = helper.start_operation(adversary_id, agent_group)
+        # Step 2: Create adversary
+        adversary_id = helper.create_adversary(ability_ids)
 
-    # Step 4: Monitor status
-    status_report = [f"Operation '{op_name}' started with ID: {operation_id}"]
-    completed = False
-    while not completed:
-        time.sleep(30)
-        status = helper.get_operation_status(operation_id)
-        status_lines = []
-        all_links = status.get('chain', [])
-        completed = status.get('state') == 'finished'
+        # Step 3: Start operation
+        operation_id, op_name = helper.start_operation(adversary_id, agent_group)
 
-        for link in all_links:
-            ability_name = link.get('ability', {}).get('name', 'Unknown')
-            status_line = f"- {ability_name}: {link.get('status')}"
-            status_lines.append(status_line)
+        # Step 4: Monitor status
+        status_report = [f"Operation '{op_name}' started with ID: {operation_id}"]
+        completed = False
+        while not completed:
+            time.sleep(30)
+            status = helper.get_operation_status(operation_id)
+            status_lines = []
+            all_links = status.get('chain', [])
+            completed = status.get('state') == 'finished'
 
-        status_report.append("\n".join(status_lines))
-        status_report.append("-----")
+            for link in all_links:
+                ability_name = link.get('ability', {}).get('name', 'Unknown')
+                status_line = f"- {ability_name}: {link.get('status')}"
+                status_lines.append(status_line)
 
-    status_report.append(f"Operation '{op_name}' completed.")
-    return "\n".join(status_report)
+            status_report.append("\n".join(status_lines))
+            status_report.append("-----")
+
+        status_report.append(f"Operation '{op_name}' completed.")
+        return "\n".join(status_report)

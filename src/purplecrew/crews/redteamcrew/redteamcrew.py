@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from pydantic import BaseModel, Field, model_validator
 from pathlib import Path
 from crewai import LLM
+from purplecrew.tools.caldera_tool import CalderaEmulationTool
 import os
 #from purplecrew.tools.az_sentinel import get_sentinel_incidents
 load_dotenv()
@@ -31,6 +32,7 @@ class RedTeamCrew():
 	serper_tool = SerperDevTool()
 	#PDFSearchTool create a RAG based database to analyze thge PDF files
 	pdf_search_tool = PDFSearchTool(pdf=pdf_path)
+	caldera_emulation_tool =CalderaEmulationTool()
 	# In case of Tools add them here 
 	# TO agent needs to be able to start research based on sentence or on a PDF report. 
 	manager_llmv1= LLM(model="gpt-4o")
@@ -74,9 +76,9 @@ class RedTeamCrew():
 	def RedTeamOperator(self) -> Agent:
 		return Agent(
 			config=self.agents_config['RedTeamOperator'],
-			tools=[self.serper_tool],
+			tools=[self.serper_tool, self.caldera_emulation_tool],
 			verbose=True,
-			allow_delegation=False
+			allow_delegation=False,
 		)
 	# The sequential tasks that are being coordinatoed by the Red Team Operator
 	# The tasks details and LLM cntext is located in the config/tasks.yaml file
@@ -108,6 +110,18 @@ class RedTeamCrew():
 		return Task(
 			config=self.tasks_config['provide_techniques'],
 			output_file='techniquesfound.md'
+		)
+	
+	@task 
+	def emulate_attacks(self) -> Task:
+		#Emulate the attacks based on the validated techniques #static inputs for testing
+		inputs={
+			'technique_ids': 'T1003,T1059,T1071',
+			'agent_group': 'redteam_agents_group_1'
+		}
+		return Task(
+			config=self.tasks_config['run_red_team_emulation'],
+			output_file='emulation.md'
 		)
 	# Define Manager agent out scope of regular agents:
 
