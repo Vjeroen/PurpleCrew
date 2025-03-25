@@ -32,18 +32,20 @@ provide_techniques:
     Only take into account the techniques that can be emulated.
     The list should be structured as follows: TechniqueID ordered in the sequence of execution - Technique description
   expected_output: >
-    An array of techniquesIDs
+    An array of techniquesIDs that was found and used for the emulation
   agent: RedTeamManager
 
 run_red_team_emulation:
   description: >
-    Use Caldera to run a red team emulation based on the following technique IDs:
-    {technique_ids}
-
-    Target agent group for the operation: {agent_group}
-
-    You must fetch all abilities for each technique, create an adversary, start an operation,
-    and monitor status until completion.
+    You will use the caldera tool to connect and run a red team emulation based 
+    on the following inputs {technique_ids}, {agent_group}
+    INPUTS: 
+      technique_ids: List of technique IDs as tuple, only the ID values as input for this tuple
+      agent_group: agent group name as string. 
+    You must fetch all abilities for each technique, create an adversary with the found abilities , start an operation,
+    and monitor status until completion. Cehck the HTTP link api/docs for the full swagger file.
+    OUTPUT: 
+      Operational run and status of the Operation
   expected_output: >
     Final operation report with status per executed ability and final completion message.
   agent: RedTeamOperator

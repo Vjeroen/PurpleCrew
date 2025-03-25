@@ -17,7 +17,6 @@ load_dotenv()
 
 @CrewBase
 class RedTeamCrew():
-	"""Redteamcrew crew"""
 	# Learn more about YAML configuration files here:
 	# Agents: https://docs.crewai.com/concepts/agents#yaml-configuration-recommended
 	# Tasks: https://docs.crewai.com/concepts/tasks#yaml-configuration-recommended
@@ -36,6 +35,9 @@ class RedTeamCrew():
 	# In case of Tools add them here 
 	# TO agent needs to be able to start research based on sentence or on a PDF report. 
 	manager_llmv1= LLM(model="gpt-4o")
+	#needs to be fixed:
+	technique_ids = ('T1003','T1059','T1071')
+	caldera_group = 'red'
 	@agent 
 	def RedTeamManager(self) -> Agent:	
 		return Agent(
@@ -115,22 +117,27 @@ class RedTeamCrew():
 	@task 
 	def emulate_attacks(self) -> Task:
 		#Emulate the attacks based on the validated techniques #static inputs for testing
-		inputs={
-			'technique_ids': 'T1003,T1059,T1071',
-			'agent_group': 'redteam_agents_group_1'
-		}
+		#input needs to be parsed via other agents and the agent_group is provided by ITOPS terraform output
+		
+		
 		return Task(
+			input={'technique_ids': self.technique_ids, 'agent_group': self.caldera_group},
 			config=self.tasks_config['run_red_team_emulation'],
+
+            verbose=True,
 			output_file='emulation.md'
 		)
-	# Define Manager agent out scope of regular agents:
+	
 
 	@crew
 	def crew(self) -> Crew:
 		"""Creates the Redteam crew"""
 		#Run all offensive research and activities that were defined by the redteam Manager
 		#print("Purple cloud Agents:", self.agents) #Display all the loaded agents 
-		#Excluding the manager agent from thw working team
+		#Excluding the manager agent from the working team as he is the coorindator 
+		#process is hierarchal as we are working with a manager for Quality Assurance
+
+		
 		redteam = [agent for agent in self.agents if agent.role != "RedTeamManager"]
 		print(redteam)
 		return Crew(

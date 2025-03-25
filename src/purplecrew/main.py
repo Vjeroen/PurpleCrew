@@ -4,6 +4,9 @@ from crewai.flow import Flow, listen, start
 import sys, os
 import warnings
 from pydantic import BaseModel
+import warnings
+#Certain Pydantic modules get a decprecation warning, but compatibility with CREWAI is limted to these modules
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 try:
     import agentops
 except ImportError:
