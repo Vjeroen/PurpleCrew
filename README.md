@@ -67,13 +67,18 @@ PurpleCrew/
                    |  Crew API / crew-api.py          |
                    +---------------+----------------+
                                    |
+                                   v
+                   +---------------+----------------+
+                   |  Purple Crew Flow               |
+                   +---------------+----------------+
+                                   |
          +-------------------------+---------------------------+
          |                         |                           |
  +-------v-------+         +-------v-------+           +-------v-------+
  |  Red Team Crew|         |  Blue Team Crew|           | IT Ops Crew   |
  +---------------+         +---------------+           +---------------+
          |                         |                           |
-         |   Custom Tools & Actions |   Detection & Response   |  Infra Management
+         |   TI & Emulation        |   Detection & Response    |  Infra Management
          |                         |                           |
    +-----v----+         +-----------v---------+       +--------v---------+
    | Caldera  |         | Azure Sentinel       |       | Terraform Tool   |
