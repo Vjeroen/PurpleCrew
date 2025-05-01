@@ -181,6 +181,7 @@ Posting a report and question to the purplecrew:
 Contributions are welcome!
 
 Feel free to fork the repo, create a feature branch, and submit a pull request.
+Reach out to me via mail or on linkedin:https://www.linkedin.com/in/vandeleurjeroen/
 
 ---
 
@@ -217,7 +218,7 @@ Further improvements and expansion are actively planned.
 ## 🛲️ Future Roadmap
 
 - **More Modular Crew Design**  
-  Introduce additional modular crews to optimize task execution pathways and allow highly dynamic, composable missions.
+  Introduce additional modular crews, agents and state flow sharing to optimize task execution pathways and allow highly dynamic, composable missions.
 
 - **Efficient Foreach Execution**  
   Implement enhanced handling of concurrent or sequential task runs using optimized `foreach_kickoff()` patterns.
@@ -229,7 +230,10 @@ Further improvements and expansion are actively planned.
   Leverage `self.state.<models>` for better state tracking between agents, ensuring smoother multi-agent cooperation and memory sharing.
 
 - **Tool Expansion**  
-  Incorporate additional cybersecurity, operations, and infrastructure tools into the agents' toolboxes.
+  Incorporate additional cybersecurity, operations, and infrastructure tools into the agents' toolboxes. 
+
+- **Cloud Expansion**  
+  The curren PoC is build on top of Azure and sysmon logging forwarded to Sentinel SIEM, in the near future support will be added for other cloud environments and detection technology.  
 
 - **UI/UX Improvements**  
   Extend or refine the simple front-end API Calls  for better visualization of tasks, crew states, and operational reports.
