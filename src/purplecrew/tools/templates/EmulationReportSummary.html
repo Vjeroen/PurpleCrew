@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AQUA BLIZZARD Threat Report</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f5f7fa;
+      color: #333;
+      padding: 20px;
+    }
+    h1, h2, h3 {
+      color: #002b45;
+    }
+    .section {
+      margin-bottom: 40px;
+    }
+    .highlight {
+      background-color: #e1f0ff;
+      padding: 15px;
+      border-left: 5px solid #0078d4;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th, td {
+      padding: 10px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+      vertical-align: top;
+    }
+    th {
+      background-color: #e1e1e1;
+    }
+    .matrix {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 10px;
+    }
+    .tech {
+      padding: 15px;
+      color: white;
+      font-size: 14px;
+      border-radius: 6px;
+      height: 90px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .detected {
+      background-color: green;
+    }
+    .new-rule {
+      background-color: purple;
+    }
+    .undetected {
+      background-color: red;
+    }
+    .failed {
+      background-color: darkgreen;
+    }
+    pre {
+      background-color: #f4f4f4;
+      padding: 10px;
+      border: 1px solid #ccc;
+      overflow-x: auto;
+    }
+    .card {
+      background-color: #fff;
+      border: 1px solid #ddd;
+      padding: 15px;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🚨 Threat Report: AQUA BLIZZARD (DEV-0586)</h1>
+
+  <div class="section highlight">
+    <h2>📌 Summary</h2>
+    <p><strong>AQUA BLIZZARD</strong> is a state-aligned threat group associated with Russian interests, previously referred to as DEV-0586. Their recent campaigns have increasingly targeted <strong>agriculture, retail, and food sector organizations</strong>, using phishing and malware-based tactics to exfiltrate data, disrupt operations, or enable further access.</p>
+    <p>This report summarizes recent emulations based on Aqua Blizzard’s known techniques, alerts detected in simulated environments, and newly proposed detection rules for hardening defenses.</p>
+  </div>
+
+  <div class="section">
+    <h2>🧭 Attack Flow</h2>
+    <ul>
+      <li><strong>T1566.001 - Spearphishing Attachment</strong>: Emails with malicious Word attachments that, when enabled, launch command shells or download payloads.</li>
+      <li><strong>T1036 - Masquerading</strong>: Use of renamed system files or zip archives to bypass user suspicion or controls.</li>
+      <li><strong>T1091 - USB Malware Spread</strong>: Simulated using USB insertion that triggers malware execution through autorun or DLL injection.</li>
+      <li><strong>T1204.002 - Malicious Files</strong>: Common infection vector through Excel 4 macros, .LNK files, and other scripts embedded in Office documents.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>🎯 Emulation Results</h2>
+    <table>
+      <tr>
+        <th>Technique ID</th>
+        <th>Technique Name</th>
+        <th>Status</th>
+      </tr>
+      <tr><td>T1566.001</td><td>Spearphishing Attachment</td><td>✅ Executed</td></tr>
+      <tr><td>T1036</td><td>Masquerading</td><td>✅ Executed</td></tr>
+      <tr><td>T1091</td><td>USB Malware Spread</td><td>✅ Executed</td></tr>
+      <tr><td>T1204.002</td><td>Malicious Files</td><td>✅ Executed</td></tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>🚨 Detection Overview</h2>
+    <table>
+      <tr>
+        <th>Time</th>
+        <th>Alert Name</th>
+        <th>Technique ID</th>
+      </tr>
+      <tr><td>2025-04-29T02:50:39Z</td><td>[Purple Crew]: Encoded VBS code execution</td><td>T1059</td></tr>
+      <tr><td>2025-04-29T02:44:26Z</td><td>[Purple-Crew]: Microsoft Word spawning command shell</td><td>T1566</td></tr>
+      <tr><td>2025-04-28T22:10:40Z</td><td>[Purple Crew]: Encoded VBS code execution</td><td>T1059</td></tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>🆕 New Detection Rules (Validated via SIGMA)</h2>
+    <table>
+      <tr>
+        <th>Rule Name</th>
+        <th>Technique ID</th>
+        <th>Status</th>
+      </tr>
+      <tr><td>Maldoc Command Execution</td><td>T1204.002</td><td>✅ Deployed</td></tr>
+      <tr><td>Zip Execution Masquerade</td><td>T1036</td><td>✅ Deployed</td></tr>
+      <tr><td>USB Malware Behavior</td><td>T1091</td><td>✅ Deployed</td></tr>
+    </table>
+
+    <h3>🔍 KQL Queries (Sysmon)</h3>
+    <pre>
+-- Maldoc Choice Flags Command Execution
+Sysmon
+| where EventID == 1
+| where CommandLine has "cmd.exe" and CommandLine has "choice"
+| where ParentImage endswith ".doc" or endswith ".docx"
+
+-- Zip File Masquerading
+Sysmon
+| where EventID == 1
+| where Image endswith ".exe" and CommandLine has ".zip"
+
+-- USB Malware Simulation
+Sysmon
+| where EventID == 1
+| where Image has "usb" or CommandLine has "removable" or CommandLine has "autorun.inf"
+    </pre>
+  </div>
+
+  <div class="section">
+    <h2>🧩 ATT&CK Matrix Coverage</h2>
+    <div class="matrix">
+      <div class="tech detected">T1566.001<br>Phishing Attachment</div>
+      <div class="tech new-rule">T1204.002<br>Malicious Files</div>
+      <div class="tech detected">T1036<br>Masquerading</div>
+      <div class="tech new-rule">T1091<br>USB Malware Spread</div>
+      <div class="tech undetected">T1059.005<br>Command-Line Scripting</div>
+      <div class="tech undetected">T1572<br>DNS Over HTTPS</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>📎 References</h2>
+    <ul>
+      <li><a href="https://attack.mitre.org/groups/G0138/" target="_blank">MITRE Profile: Aqua Blizzard</a></li>
+      <li><a href="https://www.microsoft.com/en-us/security/blog/2023/08/22/microsoft-threat-intelligence-discloses-ukraine-related-threat-activity-from-aqua-blizzard/" target="_blank">Microsoft Threat Intel Report</a></li>
+      <li><a href="https://github.com/SigmaHQ/sigma" target="_blank">SIGMA Rule Repository</a></li>
+    </ul>
+  </div>
+
+</body>
+</html>

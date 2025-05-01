@@ -1,0 +1,30 @@
+.env
+__pycache__/
+lib/
+.DS_Store
+# .gitignore
+
+# Ignore db folder
+db/
+#ignore tf state 
+*.tfstate
+tf_runtime
+tfstate/
+tf_runtime/
+tf_runtime/*
+tf_runtime/.terraform/providers/registry.terraform.io/hashicorp/azurerm/4.26.0/darwin_arm64/terraform-provider-azurerm_v4.26.0_x5
+# Ignore agentops.log file
+agentops.log
+index.htnl 
+# Ignore Debug files
+*output*
+
+#Ignore results
+mitre_attack_matrix.html
+EmulationSummary.md 
+#Ignore files directory
+files/*
+# Ignore files with -old in the filename
+*-old*
+# Ignore .venv files
+.venv

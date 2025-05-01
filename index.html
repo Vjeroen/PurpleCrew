@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CrewAI Submission</title>
+</head>
+<body>
+  <h1>Submit a File or Question to CrewAI</h1>
+
+  <form action="http://127.0.0.1:8000/start-crew" method="post" enctype="multipart/form-data">
+    <label for="inputs">Question or Description:</label><br>
+    <textarea id="inputs" name="inputs" rows="4" cols="50" placeholder="e.g. What is the adversary's activity?"></textarea><br><br>
+
+    <label for="file">Choose a file to analyze:</label><br>
+    <input type="file" id="file" name="file"><br><br>
+
+    <input type="submit" value="Submit to CrewAI">
+  </form>
+</body>
+</html>

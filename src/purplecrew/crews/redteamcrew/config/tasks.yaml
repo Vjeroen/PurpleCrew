@@ -1,0 +1,166 @@
+pdf_rag_task:
+  description: >
+    Analyze the PDF {file_path} and extract all MITRE ATT&CK techniques, tactic categories, or indicators of compromise (IOCs) found.
+    Focus on terms and attack description specific items can be:"TXXXX", "Credential Access", "Defense Evasion", reconaissence etc. and all other relevant MITRE ATT&CK references.
+    Use the PDF tool to search for identifiers, tactics, or known technique names.
+    Use the MITRE Technique Extractor to extract technqiues via regular expressions. 
+    Compare and document both outputs of techniques and remove duplicates based on technique ID.
+    In case there is an additional question as input {question} please also look into this question from the user: {question}
+    The tools always require pdf_path as input parameter, so make sure to provide this as well via {file_path}.
+  expected_output: >
+    A list of identified technique names, tactic groupings, or ATT&CK identifiers from the document (e.g., "TXXXX"(in case of sub-technique use "TXXX.XXX"), "Credential Dumping").
+  agent: TIReportAnalyst
+  
+extract_techniques:
+    goal: When seper tool is unvalaibe use local tool tyo extract the techniques.
+    description:
+     Analyze the PDF {file_path} and extract all MITRE ATT&CK techniques via the MITRE Technique Extractor tool.
+    output: 
+      List of the TechniqueIDs
+
+enrich_with_osint:
+  description: >
+    Use the serper tool and construct search query for each technique name or ID from {{pdf_rag_task}}, 
+    create a search query as a **single string** like: "MITRE ATT&CK details about T1059.001".
+    Pass **each query string** to the serper tool individually.
+  expected_output: >
+    A bullet list where each item includes:
+    - Technique ID
+    - Technique Name
+    - Short Description
+    - Reference to threat actor foud
+
+find_apt_info:
+  description: >
+    Use the output and context of {{pdf_rag_task.output}}, to get a comphrensive view on teh threat actor. 
+    Focus your search queries on adversary profiles, target industries, possible IOCs such as IP, Domain, hashes, processes etc. 
+    In case there is no direct match you can skip the search.
+    Create focuesed search query as a **single string** like: "Search for threath profile, threat intelligence information, techniques and IOCs linked to:".
+    Pass **each query string** to the serper tool individually.
+  expected_output: >
+    A table or list mapping each technique (by name or ID) to its associated APT group(s) or campaigns.
+    Include "Unknown" if attribution cannot be determined.s
+
+validate_and_structure_techniques:
+  description: >
+    For **each technique**, create a search query like: "MITRE ATT&CK T1059 details".
+    Validate the techniques found, add missing information about the enriched techniques and convert them into structured objects.
+    Each object should include:
+    - id: the MITRE ATT&CK ID
+    - name: official technique name
+    - description: a concise explanation
+    IMPORTANT:in case the serper_tool is not avalaible and gives errors: Only use all the information available from {{pdf_rag_task}} 
+  expected_output: >
+    A valid EmulationPlan JSON consisting of a list of  validated techniques 
+
+provide_techniques:
+  description: >
+    Provide a list of all the techniques that are being found, wait untill all other tasks are fully complented to create the final result.
+    This structured output is based on the previous analysis found via all previous tasks especially {{techniques_validation}} or {{pdf_rag_task.output}}.
+    Providet he TechniqueIDs and static value agent_group as "Red".
+    The list should be structured as follows: TechniqueID ordered in the sequence of executionin within the key technique_ids.
+    Provide the list of techniques as the expected output. Parse the validated output into expected_output format!
+  expected_output: >
+    Example output: provide_techniques={{"technique_ids":['TechniqueID','TechniqueID','...'], "agent_group": "Red"})
+
+identify_techniques_task:
+  description: >
+    Analyze the gathered attack surface data and identify relevant MITRE ATT&CK techniques so we know they are correct.
+    Important do not use pdf_path vas input for the search!  
+  expected_output: >
+    A JSON array called technique_list that includes all the techniques to be used, e.g.:
+        [
+          {"id": "T1059", "name": "Command and Scripting Interpreter"},
+          {"id": "T1566", "name": "Phishing"},
+          ...
+        ]
+        This list will be used later during the emulation and will be passed on in the next task. 
+  agent: RedTeamManager
+
+validate_and_prepare_input_task:
+  description: >
+    Coordinate red team operations, ensuring that validated technique lists are always transformed into the exact input format required for the Caldera tool.
+    For the techniques in the tecnhbiques ID value use the techhniquelist and only the id values found in {{provide_techniques.output}}
+    Specifically, the final JSON must be structured as and delete all duplicate values:
+    Ensure that the input for caldera_emulation_tool is a JSON string like:
+          "technique_ids": [...],
+          "agent_group": "Red"
+  agent: RedTeamOperator
+  expected_output: A String
+   
+emulate_attacks:
+  goal: Run this tool once with completed input and only when all techniques are known. 
+        This will create a valid operation in the caldera_emulation_tool!
+  description: >
+    Run this task once, when all techniques are know and based on the input result from {{validate_and_prepare_input_task}}, run the Caldera Emulation Tool to emulate the attack.
+    An operation id will be created in case all input values were given! Tranform input to match the following structure with values mode, technique_ids and agent_group:
+      {{
+        {{"mode": "run_caldera", "technique_ids": [...], "agent_group": "Red"}}
+      }}
+    IMPORTANT: Do not run if the input is missing or incomplete. You will only use the caldera_tool to connect and run a red team emulation based on the provided techniques and agent group.
+    The expected output of the previous task {{provided_techniques}} and use it as the input for the caldera_emulation_tool.
+    Wait intill all techniques have been discovered and then only submit to the caldera_emulation_tool and filter on distinct technique ids.
+    Do not use other tools, but only get the technique IDs and agent_group as the input for the tool as a structured message.
+    INPUT
+      "mode": "run_caldera" and {{validate_and_prepare_input_task}} as input
+    OUTPUT: 
+      The operation ID or a message confirming success, like: "Success operation created with:.
+  expected_output: >
+    The operation ID or a message confirming success, like: "Success operation created with: .
+  agent: RedTeamOperator
+
+save_operation_details:
+  description: >
+    Capture and save the **operation ID** and **operation name** from the previous task output.
+    
+    The input from the previous task will be in the following format:
+      "Success operation created with:, ('716ed81b-a6e1-4a75-9d5c-64e1c54353d9', 'purplecrewrun-20250424-macs')"
+
+    Your task is to:
+    1. **Extract the operation ID and operation name** from the provided string.
+    2. **Validate** that both values are correctly extracted:
+       - **Operation ID** should follow UUID format: `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`.
+       - **Operation Name** should follow the pattern: `purplecrewrun-YYYYMMDD-xxxx`.
+    3. Save the extracted values into a **structured JSON object** like:
+      {{
+        "operation_id": "716ed81b-a6e1-4a75-9d5c-64e1c54353d9",
+        "operation_name": "purplecrewrun-20250424-macs"
+      }}
+    4. Return this JSON object as the final output.
+  expected_output: >
+    A JSON object containing the extracted operation details:
+    {{
+      "operation_id": "716ed81b-a6e1-4a75-9d5c-64e1c54353d9",
+      "operation_name": "purplecrewrun-20250424-macs"
+    }}
+
+monitor_operation_status:
+  description: >
+    Monitor the status of the Caldera emulation operation until it completes.
+    Use the Caldera Emulation Tool to check the operation's status every 10 seconds. 
+    The operation ID will be provided from the output of the previous task (emulate_attacks).
+    Important: use the following input structure to get expected output: 
+    {{"input_json_calderarun":
+            "mode": "monitor",
+            "operationid": "<<TO_BE_FILLED_DURING_EXECUTION>>
+      }}
+    Continue polling the operation status until it reaches a "finished" state.
+    Log the execution state of each technique and host as you monitor.
+  expected_output: >
+    - Final state (e.g., "finished")
+  agent: RedTeamOperator
+
+ti_analysis_results:
+  description: >
+    Use the serper tool and conduct threat intel research about the attacks found in the PDF {file_path}.
+    Enrich the report, and provided a detailed summary using public sources, MITRE ATT&CK information, and Adversary related information.
+    Structure as follows, if the information is available: 
+      - Title 
+      - Summary of the attack and objective 
+      - Target and victim information
+      - How the attack flow works and references to known MITTRE ATT&CK techniqes. 
+      - The results of the Caldera Emulation provided by {{monitor_operation_status}}, create a table to show all abilities, link to technique id and status 
+      - List of Indicators of Compromise such as IPs, domain names, files and other known IOCs
+  expected_output: >
+    Create a Markdown summary on your analysis, including the found indicators of compromise and techniques being used.
+  agent: TTPReportWriter

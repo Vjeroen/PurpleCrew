@@ -1,0 +1,433 @@
+
+
+##############################################################################################
+# win10-1.tf filename 
+# Objective: This system is used for training purposes & simulate attacks and detection logic 
+# Configuration of Windows 10 with check if MDE is onboarded
+# In case Defender for Servers is not set by default, the template will try to enforce MDE onboarding
+# Note that running this resource will cost an addition 15 dollar per monthe due to MDE
+# Syslog will also forward the Windows events to the events table in the Log Analytics workspace
+##############################################################################################
+# Author: Jeroen Vandeleur 
+##############################################################################################
+
+variable "endpoint-ip-win10-1" {
+  default = "10.100.20.10"
+}
+
+variable "admin-username-win10-1" {
+  default = "RTCAdmin"
+}
+
+variable "admin-password-win10-1" {
+  default = "3VdRjqq08K"
+}
+
+variable "join-domain-win10-1" {
+  default = false
+}
+
+variable "endpoint_hostname-win10-1" {
+  default = "win10-1"
+}
+
+variable "tags_endpoint_hostname-win10-1" {
+  type = map(any)
+
+  default = {
+    terraform = "true"
+  }
+}
+locals {
+  storage_account_name = "purplecloud${random_string.suffix.id}"
+}
+variable "location" {
+  default = "eastus"
+}
+
+variable "resource_group_name" {
+  default = "PurpleCrewDemo"
+}
+
+variable "storage_container_name" {
+  default = "staging"
+}
+
+variable "azure_users_file" {
+  default = "ad_users.csv"
+}
+
+variable "azure_aadconnect_file" {
+  default = "AzureADConnect.msi"
+}
+
+# Random string for resources
+resource "random_string" "suffix" {
+  length  = 5
+  special = false
+  upper   = false 
+}
+
+# Specify the resource group
+resource "azurerm_resource_group" "network" {
+  name     = "${var.resource_group_name}-${random_string.suffix.id}"
+  location = var.location
+}
+
+# Create a storage account
+resource "azurerm_storage_account" "storage-account" {
+  name                     = local.storage_account_name 
+  resource_group_name      = "${var.resource_group_name}-${random_string.suffix.id}"
+  location                 = var.location 
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+  allow_nested_items_to_be_public = true
+
+  depends_on = [azurerm_resource_group.network]
+}
+
+# Create storage container
+resource "azurerm_storage_container" "storage-container" {
+  name                  = var.storage_container_name 
+  storage_account_name  = azurerm_storage_account.storage-account.name
+  container_access_type = "blob"
+
+  depends_on = [azurerm_resource_group.network]
+}
+locals {
+  sysmon_config_s            = "sysmonconfig-export.xml"
+  sysmon_zip_s               = "Sysmon.zip"
+}
+
+# Create a storage account for sysmon files
+resource "azurerm_storage_account" "sysmon_sentinel" {
+  name                     = "ss${random_string.suffix.id}"
+  resource_group_name = "${var.resource_group_name}-${random_string.suffix.id}"
+  location                 = var.location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+  allow_nested_items_to_be_public = true
+
+  depends_on = [azurerm_resource_group.network]
+}
+
+# Create storage container for sysmon files
+resource "azurerm_storage_container" "sysmon_sentinel" {
+  name                  = "provisioning"
+  storage_account_name  = azurerm_storage_account.sysmon_sentinel.name
+  container_access_type = "blob"
+
+  depends_on = [azurerm_resource_group.network]
+}
+
+# Upload SwiftOnSecurity Sysmon configuration xml file
+resource "azurerm_storage_blob" "sysmon_config_sentinel" {
+  name                   = local.sysmon_config_s
+  storage_account_name   = azurerm_storage_account.sysmon_sentinel.name
+  storage_container_name = azurerm_storage_container.sysmon_sentinel.name
+  type                   = "Block"
+  source                 = "/files/sysmon/${local.sysmon_config_s}"
+}
+
+# Upload Sysmon zip
+resource "azurerm_storage_blob" "sysmon_zip_sentinel" {
+  name                   = local.sysmon_zip_s
+  storage_account_name   = azurerm_storage_account.sysmon_sentinel.name
+  storage_container_name = azurerm_storage_container.sysmon_sentinel.name
+  type                   = "Block"
+  source                 = "/files/sysmon/${local.sysmon_zip_s}"
+}
+
+resource "azurerm_public_ip" "win10-external-ip-win10-1" {
+  name                = "${var.endpoint_hostname-win10-1}-public-ip-${random_string.suffix.id}"
+  location            = var.location
+  resource_group_name = "${var.resource_group_name}-${random_string.suffix.id}"
+  allocation_method   = "Static"
+
+  depends_on = [azurerm_resource_group.network]
+}
+
+resource "azurerm_network_interface" "win10-primary-nic-win10-1" {
+  name                = "${var.endpoint_hostname-win10-1}-int-nic-${random_string.suffix.id}"
+  location            = var.location
+  resource_group_name = "${var.resource_group_name}-${random_string.suffix.id}"
+  internal_dns_name_label = "${var.endpoint_hostname-win10-1}-${random_string.suffix.id}"
+
+  ip_configuration {
+    name                          = "primary"
+    subnet_id                     = azurerm_subnet.user_subnet-subnet.id
+    private_ip_address_allocation = "Static"
+    private_ip_address = var.endpoint-ip-win10-1
+    public_ip_address_id = azurerm_public_ip.win10-external-ip-win10-1.id
+
+  }
+  depends_on = [azurerm_resource_group.network]
+}
+
+locals {
+  win10vmname-win10-1 = var.endpoint_hostname-win10-1 
+  win10vmfqdn-win10-1 = "${local.win10vmname-win10-1}.rtc.local"
+  win10custom-data-params-win10-1   = "Param($RemoteHostName = \"${local.win10vmfqdn-win10-1}\", $ComputerName = \"${local.win10vmname-win10-1}\")"
+  win10custom-data-content-win10-1  = (join(" ", [
+    local.win10custom-data-params-win10-1, 
+    templatefile("/files/win10/bootstrap-win10-sentinel.ps1.tpl", {
+    join_domain               = var.join-domain-win10-1 ? 1 : 0
+    install_sysmon            = true ? 1 : 0
+    install_art               = true ? 1 : 0
+    auto_logon_domain_user    = false ? 1 : 0
+    dc_ip                     = "DC_IP" 
+    endpoint_ad_user          = "ENDPOINT_AD_USER" 
+    endpoint_ad_password      = "ENDPOINT_AD_PASSWORD" 
+    winrm_username            = "WINRM_USERNAME" 
+    winrm_password            = "WINRM_PASSWORD" 
+    admin_username            = var.admin-username-win10-1
+    admin_password            = var.admin-password-win10-1
+    ad_domain                 = "AD_DOMAIN" 
+    storage_acct_s            = azurerm_storage_account.sysmon_sentinel.name
+    storage_container_s       = azurerm_storage_container.sysmon_sentinel.name
+    sysmon_config_s           = local.sysmon_config_s
+    sysmon_zip_s              = local.sysmon_zip_s
+    storage_acct_d            = azurerm_storage_account.defender_scripts.name
+    storage_container_d       = azurerm_storage_container.scripts.name
+    MDE_onboarding_script     = "WindowsDefenderATPOnboardingScript.cmd"
+  }) ]))
+}
+
+/*data "template_file" "ps-template-win10-1" {
+  template = file("/files/win10/bootstrap-win10-sentinel.ps1.tpl")
+
+  vars  = {
+    join_domain               = var.join-domain-win10-1 ? 1 : 0
+    install_sysmon            = true ? 1 : 0
+    install_art               = true ? 1 : 0
+    auto_logon_domain_user    = false ? 1 : 0
+    dc_ip                     = "DC_IP" 
+    endpoint_ad_user          = "ENDPOINT_AD_USER" 
+    endpoint_ad_password      = "ENDPOINT_AD_PASSWORD" 
+    winrm_username            = "WINRM_USERNAME" 
+    winrm_password            = "WINRM_PASSWORD" 
+    admin_username            = var.admin-username-win10-1
+    admin_password            = var.admin-password-win10-1
+    ad_domain                 = "AD_DOMAIN" 
+    storage_acct_s            = azurerm_storage_account.sysmon_sentinel.name
+    storage_container_s       = azurerm_storage_container.sysmon_sentinel.name
+    sysmon_config_s           = local.sysmon_config_s
+    sysmon_zip_s              = local.sysmon_zip_s
+  }
+}*/
+
+resource "local_file" "debug-bootstrap-script-win10-1" {
+  # For inspecting the rendered powershell script as it is loaded onto endpoint through custom_data extension
+  content = local.win10custom-data-content-win10-1
+  filename = "/output/win10/bootstrap-${var.endpoint_hostname-win10-1}-sentinel.ps1"
+}
+
+resource "azurerm_virtual_machine" "azurerm-vm-win10-1" {
+  name                          = "${local.win10vmname-win10-1}-${random_string.suffix.id}"
+  resource_group_name           = "${var.resource_group_name}-${random_string.suffix.id}"
+  location                      = var.location
+  vm_size                       = "Standard_D2as_v4"
+  delete_os_disk_on_termination = true
+  
+  identity {
+    type         = var.identity_type
+    identity_ids = [azurerm_user_assigned_identity.uai.id]
+  }
+  
+  network_interface_ids         = [
+    azurerm_network_interface.win10-primary-nic-win10-1.id,
+  ]
+  
+  storage_image_reference {
+    publisher = "MicrosoftWindowsDesktop"
+    offer     = "Windows-10"
+    sku       = "win10-22h2-pro-g2" 
+    version   = "latest"
+  }
+
+  storage_os_disk {
+    name              = local.win10vmname-win10-1
+    caching           = "ReadWrite"
+    managed_disk_type = "Standard_LRS"
+    create_option     = "FromImage"
+  }
+  
+  os_profile_windows_config {
+    provision_vm_agent = true
+    winrm {
+      protocol = "HTTP"
+    }
+    additional_unattend_config {
+      pass = "oobeSystem"
+      component = "Microsoft-Windows-Shell-Setup"
+      setting_name = "AutoLogon"
+      content      = "<AutoLogon><Password><Value>${var.admin-password-win10-1}</Value></Password><Enabled>true</Enabled><LogonCount>1</LogonCount><Username>${var.admin-username-win10-1}</Username></AutoLogon>"
+    }
+    
+    additional_unattend_config {
+      pass = "oobeSystem"
+      component = "Microsoft-Windows-Shell-Setup"
+      setting_name = "FirstLogonCommands"
+      content      = file("/files/win10/FirstLogonCommands.xml")
+    }
+  }
+  
+  os_profile {
+    custom_data    = local.win10custom-data-content-win10-1
+    computer_name  = local.win10vmname-win10-1
+    admin_username = var.admin-username-win10-1
+    admin_password = var.admin-password-win10-1
+  }
+
+  depends_on = [
+    azurerm_network_interface.win10-primary-nic-win10-1,
+    azurerm_storage_blob.sysmon_zip_sentinel,
+
+  ]
+}
+
+resource "azurerm_virtual_machine_extension" "azurerm-vm-win10-1" {
+  count                = 1
+  name                 = "AMAExtension-azurerm-vm-win10-1"
+  virtual_machine_id   = azurerm_virtual_machine.azurerm-vm-win10-1.id
+  publisher            = "Microsoft.Azure.Monitor"
+  type                 = "AzureMonitorWindowsAgent"
+  type_handler_version = "1.25"
+  auto_upgrade_minor_version = "true"
+  depends_on = [
+    azurerm_virtual_machine.azurerm-vm-win10-1,
+  ]
+
+  tags = merge(var.tags_endpoint_hostname-win10-1, tomap({ "firstapply" = timestamp() }))
+  
+  lifecycle {
+    ignore_changes = [tags]
+  }
+}
+
+ 
+# data collection rule association
+resource "azurerm_monitor_data_collection_rule_association" "dcra-azurerm-vm-win10-1" {
+ count                   = 1
+ name                    = "dcra-azurerm-vm-win10-1"
+ target_resource_id      = azurerm_virtual_machine.azurerm-vm-win10-1.id
+ data_collection_rule_id = azurerm_monitor_data_collection_rule.rule1_azurerm-vm-win10-1.id
+}
+ 
+resource "local_file" "hosts-cfg-win10-1" {
+  content = templatefile(".//files/win10/hosts.tpl",
+    {
+      ip    = azurerm_public_ip.win10-external-ip-win10-1.ip_address
+      auser = var.admin-username-win10-1
+      apwd  = var.admin-password-win10-1
+    }
+  )
+  filename = "/hosts-${var.endpoint_hostname-win10-1}.cfg"
+}
+
+# add 'Contributor' role scoped to subscription for system-assigned managed identity
+resource "azurerm_role_assignment" "contributor_si_azurerm-vm-win10-1" {
+  scope                = data.azurerm_subscription.mi.id
+  role_definition_name = "Contributor"
+  principal_id   = azurerm_virtual_machine.azurerm-vm-win10-1.identity[0].principal_id
+}
+
+# add 'Virtual Machine Contributor' role scoped to subscription for system-assigned managed identity
+resource "azurerm_role_assignment" "vm_contributor_si_azurerm-vm-win10-1" {
+  scope                = data.azurerm_subscription.mi.id
+  role_definition_name = "Virtual Machine Contributor"
+  principal_id   = azurerm_virtual_machine.azurerm-vm-win10-1.identity[0].principal_id
+}
+
+# add 'Key Vault Reader' role scoped to subscription for system-assigned managed identity
+resource "azurerm_role_assignment" "key_vault_reader_si_azurerm-vm-win10-1" {
+  scope                = data.azurerm_subscription.mi.id
+  role_definition_name = "Key Vault Reader"
+  principal_id   = azurerm_virtual_machine.azurerm-vm-win10-1.identity[0].principal_id
+}
+# Install Azure Monitor Agent (AMA)
+
+
+#Enable Defender for Endpoint plan in Azure 
+resource "azurerm_security_center_subscription_pricing" "defender_for_servers" {
+  tier          = "Standard"
+  resource_type = "VirtualMachines"
+  lifecycle {
+    ignore_changes = [tier]  # ✅ Ignore future changes to prevent Terraform conflicts
+  }
+}
+
+  
+
+
+##BLOB STROAGE for onboarding script Windows Defender for endpoint
+resource "azurerm_storage_account" "defender_scripts" {
+  name                     = "defenderscriptsnxtdemo"
+  resource_group_name      = "${azurerm_resource_group.network.name}"
+  location                 = var.location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+ 
+}
+
+resource "azurerm_storage_container" "scripts" {
+  name                  = "onboarding-scripts"
+  storage_account_name = azurerm_storage_account.defender_scripts.name
+  container_access_type = "blob" #Insecure makes blob storage public 
+}
+
+#Upload local file to blob storage
+resource "azurerm_storage_blob" "onboarding_script" {
+  name                   = "WindowsDefenderATPOnboardingScript.cmd"
+  storage_account_name   = azurerm_storage_account.defender_scripts.name
+  storage_container_name = azurerm_storage_container.scripts.name
+  type                   = "Block"
+  source                 = "/files/WindowsDefenderATPLocalOnboardingScript.cmd"  # Local file path
+}
+
+
+resource "azurerm_monitor_data_collection_rule_association" "dcra_defender" {
+  name                    = "dcra-defender"
+  target_resource_id      = azurerm_virtual_machine.azurerm-vm-win10-1.id
+  data_collection_rule_id = azurerm_monitor_data_collection_rule.defender_logs.id
+}
+resource "azurerm_virtual_machine_extension" "defender_onboarding" {
+  name                 = "DefenderOnboarding"
+  virtual_machine_id   = azurerm_virtual_machine.azurerm-vm-win10-1.id
+  publisher            = "Microsoft.Compute"
+  type                 = "CustomScriptExtension"
+  type_handler_version = "1.10"
+
+  settings = jsonencode({
+    fileUris = ["https://${azurerm_storage_account.defender_scripts.name}.blob.core.windows.net/${azurerm_storage_container.scripts.name}/WindowsDefenderATPOnboardingScript.cmd"],
+    commandToExecute = "powershell -ExecutionPolicy Unrestricted -Command \"Start-Process -FilePath 'cmd.exe' -ArgumentList '/c WindowsDefenderATPOnboardingScript.cmd' -Verb RunAs\""
+  })
+
+  depends_on = [azurerm_storage_blob.onboarding_script]
+}
+
+#ONBOARDING TO MDE DONE 
+
+output "windows_endpoint_details_azurerm-vm-win10-1" {
+  value = <<EOS
+-------------------------
+Virtual Machine ${var.endpoint_hostname-win10-1} 
+-------------------------
+Computer Name:  ${var.endpoint_hostname-win10-1}
+Private IP: ${var.endpoint-ip-win10-1}
+Public IP:  ${azurerm_public_ip.win10-external-ip-win10-1.ip_address}
+local Admin:  ${var.admin-username-win10-1}
+local password: ${var.admin-password-win10-1} 
+-------------
+SSH to ${var.endpoint_hostname-win10-1}
+-------------
+ssh ${var.admin-username-win10-1}@${azurerm_public_ip.win10-external-ip-win10-1.ip_address}
+
+BlobStorage account for MDE Onboarding: 
+System-Assigned Identity for ${var.endpoint_hostname-win10-1}:
+-------------------------
+Object ID:   ${azurerm_virtual_machine.azurerm-vm-win10-1.identity[0].principal_id}
+Roles:       ${azurerm_role_assignment.contributor_si_azurerm-vm-win10-1.role_definition_name}, ${azurerm_role_assignment.vm_contributor_si_azurerm-vm-win10-1.role_definition_name}, ${azurerm_role_assignment.key_vault_reader_si_azurerm-vm-win10-1.role_definition_name}
+EOS
+}
+

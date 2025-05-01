@@ -1,0 +1,29 @@
+validate_caldera:
+  description: >
+    Conduct a full review of the emulation architecture using the caldera_tool, status and output is succes when caldera has one agent running and repots succes
+    Use the CalderaEmulationTool with this input and only check the status once with the tool:
+    INPUT: "mode": "check_caldera" as input.
+  expected_output: > 
+    A JSON string indicating that architecture is succesfull or not with the following key:value pair: status: output of final result, agents : [ based on output of caldera tool] or 0 in case no agents are found.
+  agent: caldera_operator
+
+terraform_fix:
+  description: >
+    If {{validate_caldera.status}} is not "success", from {{validate_caldera}}, you can use Terraform to fix the infrastructure issues found in the previous task. 
+    In case an agent is already up and running ignore all tasks and exit itops crew.
+    When the agents are not running in {{validate_caldera.output}} you need to redeploy the infrastructre with the terraform_tool. 
+    
+  expected_output: >
+    Rendered values after the terraform run
+  agent: terraform_agent
+  skip_if: "{{validate_caldera.status}} contains 'success'"
+
+define_final_status:
+  description: >
+      Based on the initial output of the caldera operator agent and task {{validate_caldera}}, you will define the final status of the current architecture based on the previous tasks.
+      Please provide immediate result based on the output of the following tasks {{validate_caldera}} 
+      In case of issues you will need to check the status of the {{terraform_fix}} task but only in case the previous task was not succesfull.
+      Otherwise you can report there are no issues and you can exit the crew with success message. 
+  expected_output: >
+      A structured messages that contains the status: and fill in the the actual status of the infrastructure. Exmaple: status: "success" or status: "failure"
+  agent: itops_manager

@@ -1,0 +1,207 @@
+save_emulated_techniques:
+  description: >
+    Analyze the provided emulation data {emulationexecution}.
+
+    Your goal is to extract and structure the following elements for each emulated action:
+    - MITRE ATT&CK technique_id (e.g., "T1059.001")
+    - Technique name (e.g., "PowerShell")
+    - Host involved (hostname string)
+
+    If the {emulationexecution} input is missing, empty, or invalid:
+    - Use the following default list of technique IDs:
+      ["T1059.001", "T1071.001", "T1021.002", "T1210", "T1078", "T1486", "T1110.001", "T1040", "T1071.003", "T1499"]
+    - Assign a placeholder technique name like "Unknown Technique" and a placeholder host like "unknown-host" if needed.
+
+    Only rely on the input or the default list provided. No external searches or assumptions beyond that.
+
+    Prepare a clean, structured list we can reuse for future tasks.
+
+  expected_output: >
+    A JSON array where each entry includes:
+    - technique_id
+    - technique_name
+    - host
+
+    Example output:
+    [
+      {{
+        "technique_id": "T1059.001",
+        "technique_name": "PowerShell",
+        "host": "win10-1"
+      }},
+      ...
+    ]
+
+get_current_detection_rules:
+  description: >
+    Retrieve the current set of detection rules deployed in the SIEM.
+    Ensure the output includes the rule name, description, associated technique ID (if applicable), and whether the rule is enabled or disabled.
+  expected_output: >
+    A table or structured JSON of detection rules, including:
+    - rule_name
+    - description
+    - technique_id (if mapped)
+    - status (enabled/disabled)
+
+get_current_alerts:
+  description: >
+    Gather all active and recent alerts from the {{sentinel_tool}} for the last 24 hours, the mode input value is always Getevents. 
+    You the sentinel_tool and based on the return output of this tool is JSON structure: with all the alerts.
+    Verify that techniques are pupulated, translate the JSON output and add it to the crew context. Provide this detailed output to the SOC Manager.
+    Important your input for the tool should be hours=24 and mode=Getevents with the following structure:
+      {{
+        {{'mode": "Getevents", "query": "sample", "hours_back": 24}}
+      }}
+  expected_output: >
+    Structured output including the following details per alert: 
+      AlertTimeTimeGenerated, AlertName, Status, ProviderName, Tactics, Techniques, SubTechniques, CompromisedEntity, Entities, AlertLink, ExtendedProperties, RemediationSteps, SystemAlertId
+  agent: soc_analyst
+
+analyze_current_alerts:
+  description: >
+    Based on the alerts you have from {{get_current_alerts}} and the list of {{save_emulated_techniques}} you need to provide an overview!
+    This overview needs to be a structured table with all emulated techniques, alerts linked based on techniqueID and or subtechniqueID. 
+    It needs to be clear to the SOC manager wich attacks were detected and which were not.
+    Create a table that shows this overview, in case no alert was found display status as not detected. 
+    None detected emulated techniques should be highlighted and forwarded to the Sigma Rule Specialist for further investigation.
+  expected_output: >
+    Structured output per emulated item {{save_emulated_techniques}} mapped to the {{get_current_alerts}} the following details per alert: 
+        Emulated ID, Technique Name, Status, Linked Alert, Linked AlertName, Time detected
+
+generate_matrix_detection:
+  description: >
+    Transform the {{save_emulated_techniques}} as correct input for the tool named: mitre_matrix_tool. 
+    The input for this tool is a JSON string, please use the technique ids that were tested during the emulation. 
+    Exexute the task and generate the html file for this adversary!
+  expected_output: >
+    Link to the html file and confirmation that the matrix HTML file was generated
+
+find_sigma_rules:
+    description: >
+      Based on the previous task {{analyze_current_alerts}} collect the undetected techniques and commands linked to this techniques.
+      *For each unde technique* Search with the {{git_sigma_tool}} to look for SIGMA rules that are linked to the undetected techniques.
+      Important: Focus on the detection rules linked the emulated hosts operating platforms and commands executed in our emulation plan.
+      Analyze all the YAML files and put save them as a structured object for the next task. 
+      In case you didnt find a relevant SIGMA rule please report that no SIGM available. 
+    expected_output: >
+      Structured list for SIGMA rules detected, include detection details and corresponding technique ID.
+
+get_sentinel_context: 
+  description: >
+    Use the {{sentinel_tool}} with input parameter {{"mode": "get_context"}} to retrieve the full Microsoft Sentinel workspace structure.
+    Specifically:
+    - Call the sentinel_tool in mode "get_context" without manually crafting KQL queries.
+    - Retrieve a structured overview of available tables, their fields, types, and descriptions.
+    - Safely handle if some tables have missing or restricted schemas.
+    
+    Important:
+    - The tool internally handles all KQL execution and schema parsing.
+    - You must not attempt manual querying. Only invoke the tool correctly.
+
+    Your output MUST be:
+    - A structured JSON object listing:
+      - Table names
+      - Fields per table (name, type, optional description)
+
+  expected_output: >
+    A structured JSON like:
+    {{
+      "tables": [
+        {{
+          "table_name": "SecurityEvent",
+          "schema": [
+            {{"ColumnName": "TimeGenerated", "ColumnType": "datetime", "ColumnDescription": "Event timestamp"}},
+            {{"ColumnName": "Computer", "ColumnType": "string", "ColumnDescription": "Hostname"}}
+          ]
+        }},
+        ...
+    }}
+    
+review_sentinel_context:
+  description: >
+    Carefully review the Sentinel tables and schema provided by {{get_sentinel_context}}.
+    Identify the correct table and fields that match the MITRE ATT&CK technique you are trying to detect.
+    Only use tables that exist and fields that are present in the schema.
+  expected_output: >
+    A short paragraph identifying:
+    - Which table you will query (e.g., `SecurityEvent`, `Sysmon`)
+    - Which fields you will use (e.g., `CommandLine`, `Image`, `ParentImage`)
+  agent: detection_engineer
+
+transform_sigmaKQL: 
+    description: >
+      Understand and use the Sentinel tables and fields from our previous task {{get_sentinel_context}}For each sigma rule found in {{find_sigma_rules:}} transform the content into a structured Sentinel KQL Query focus on sysmon.
+      Save all the KQL Queries into a structured list that can be validated in the next step. 
+    expected_output: >
+      Structured list of KQL queries correlated with detection techniques.
+
+valdiate_KQL:
+  description: >
+    Use the {{sentinel_tool}} with mode run_query, lookback period is 30d, your query for each Sentinel KQL query created in {{transform_sigmaKQL}}.
+        {{'mode": "run_query", "query": "<Your Query>", "hours_back": 6400}}
+      }}
+    Run that query and analyze the number of results returned. In case the result is an error, more then 30 or 0 fintune the query and validate again.
+    Provide all validated queries as a structured object 
+  expected_output: >
+    Structured list of KQL queries correlated with detection techniques.
+
+report_newKQL_Detections:
+  description: >
+    Present the new detection rules and validation results to our SOC Manager as output.
+  expected_output: >
+    A detailed list of new KQL detection rules with metadata, timestamps, and potential coverage.
+
+transform_KQL_JSON:
+  create_newdetection_rule:
+  description: >
+    Create a new Microsoft Sentinel detection rule.
+
+    You must use the tool {{analytic_rule_tool}} to build the rule.
+    Required parameters:
+    - rule_id: Unique identifier for the rule (a new UUID string)
+    - display_name: Short and clear name describing the detection 
+    - description: Full explanation of what the detection identifies
+    - severity: One of ['Low', 'Medium', 'High', 'Informational']
+    - query: Teh query you received from {{valdiate_KQL}}
+    - suppression_duration: ISO 8601 format (e.g., "PT5H")
+    - suppression_enabled: true or false
+    - tactics: List of MITRE ATT&CK tactics (e.g., ["Execution", "Persistence"])
+    - techniques: List of MITRE ATT&CK techniques (e.g., ["T1059"])
+    You must call the tool with all the required parameters properly set.
+    Your final output MUST be:
+    - The full JSON text representing the analytic rule
+    - Formatted correctly to be saved directly into the GitHub repo
+  expected_output: >
+    A complete, valid JSON file for a Microsoft Sentinel analytic rule ready for deployment.
+
+push_newsentinel_rule:
+  description: >
+    For each new detection rul Take the generated JSON analytic rule and commit it to the Detection GitHub repository using the {{GitSentinelTool}}.
+
+    You must:
+    - Save the JSON into the repository.
+    - Name the file clearly using the rule name (e.g., "rule_T1059_EncodedVBS.json").
+    - Place the file in the appropriate directory (for example: "detections/").
+
+    Commit message should clearly indicate the purpose, like:
+    "Add new detection rule for [Technique/Rule Name]".
+
+    Ensure that you push to the correct branch or create a pull request as per the GitSentinelTool configuration.
+
+  expected_output: >
+    Confirmation that the analytic rule JSON has been successfully pushed (or a PR created) into the GitHub repository.
+
+report_final_results:
+  description: >
+    Write full blown report based on all the infromation received from {{save_emulated_techniques}},{{get_current_alerts}}, {{analyze_current_alerts}}, {{generate_matrix_detection}}, {{find_sigma_rules}}, {{report_newKQL_Detections}} and {{push_newsentinel_rule}}.
+    This report includes as Title: Emulation run and the name of the threat actor.
+    - Summarization that was enriched by the RedTeamManagerabout the threat actor 
+    - Overview of the emulation plan and the status of the emulated techniques
+    - Overview of the alerts received from the {{get_current_alerts}}
+    - Overview of the new detection rules with cpmphrensove overview and the detection rules that were implemented 
+    - Overview of the sucessfully created detection rules pushed to the GitHub repository
+
+    Write your report to a markdown file and also translate it into JSOAN based on sections!
+  expected_output: >
+    A markdown file with the report that can be used for the SOC Manager and the Red Team Manager to analyze the results.
+    A JSON file that can be used by external to ingest the details of this run.
