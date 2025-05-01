@@ -39,10 +39,11 @@ PurpleCrew/
 │   ├── blueteamcrew/        # Blue Team agents and tools
 │   ├── redteamcrew/         # Red Team agents and tools
 │   ├── itopscrew/           # IT Operations agents and tools
+├── src/tools/               # Tool that are being leveraged by the crews 
 │   ├── caldera_tool/        # Custom Caldera integration
 │   ├── az_sentinel/         # Custom Azure Sentinel integration
 │   ├── mitre_matrix_navigator/ # MITRE ATT&CK matrix navigation
-│   └── terraform_tool/      # Terraform automation helpers
+│   └── terraform_tool/      # Terraform automation helpers, for deploying emulation hosts 
 ├── EmulationSummary.md      # Summary of recent emulations
 ├── FullSummaryReport.md     # Detailed operational reports
 ├── crew-api.py              # Main entrypoint for agent interactions
